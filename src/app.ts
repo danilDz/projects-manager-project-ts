@@ -1,3 +1,58 @@
+// Project Status enum
+enum ProjectStatus {
+  Active,
+  Finished,
+}
+
+// SingleProject Class
+class SingleProject {
+  constructor(
+    public id: string,
+    public title: string,
+    public description: string,
+    public people: number,
+    public status: ProjectStatus
+  ) {}
+}
+
+// Listener type
+type Listener = (items: SingleProject[]) => void;
+
+// Project State Management
+class ProjectState {
+  private listeners: Listener[] = [];
+  private projects: SingleProject[] = [];
+  private static instance: ProjectState;
+
+  private constructor() {}
+
+  static getInstance() {
+    if (this.instance) return this.instance;
+    this.instance = new ProjectState();
+    return this.instance;
+  }
+
+  addListener(listenerFn: Listener) {
+    this.listeners.push(listenerFn);
+  }
+
+  public addProject(title: string, description: string, people: number) {
+    const newProject = new SingleProject(
+      Math.random().toString(),
+      title,
+      description,
+      people,
+      ProjectStatus.Active
+    );
+    this.projects.push(newProject);
+    for (const listener of this.listeners) {
+      listener(this.projects.slice());
+    }
+  }
+}
+
+const projectState = ProjectState.getInstance();
+
 // Validation
 interface Validatable {
   value: string | number;
@@ -46,6 +101,7 @@ class ProjectList {
   private hostElement: HTMLDivElement;
   private templateElement: HTMLTemplateElement;
   private element: HTMLElement;
+  private assignedProjects: SingleProject[] = [];
 
   constructor(private type: "active" | "finished") {
     this.templateElement = <HTMLTemplateElement>document.getElementById("project-list");
@@ -55,8 +111,26 @@ class ProjectList {
     this.element = importedNode.firstElementChild as HTMLElement;
     this.element.id = `${this.type}-projects`;
 
+    projectState.addListener((projects: SingleProject[]) => {
+      this.assignedProjects = projects.filter((project: SingleProject) => {
+        if (this.type === "active") return project.status === ProjectStatus.Active;
+        return project.status === ProjectStatus.Finished;
+      });
+      this.renderProjects();
+    });
+
     this.attach();
     this.renderContent();
+  }
+
+  private renderProjects() {
+    const listEl = document.getElementById(`${this.type}-projects-list`) as HTMLUListElement;
+    listEl.innerHTML = "";
+    for (const project of this.assignedProjects) {
+      const listItem = document.createElement("li");
+      listItem.textContent = project.title;
+      listEl.appendChild(listItem);
+    }
   }
 
   private renderContent() {
@@ -125,7 +199,7 @@ class ProjectInput {
     } else return [title, description, +people];
   }
 
-  private clearInput(): void {
+  private clearInputs(): void {
     this.titleInputElement.value = "";
     this.descriptionInputElement.value = "";
     this.peopleInputElement.value = "";
@@ -137,8 +211,8 @@ class ProjectInput {
     const userInput = this.gatherUserInput();
     if (Array.isArray(userInput)) {
       const [title, description, people] = userInput;
-      console.log(title, description, people);
-      this.clearInput();
+      projectState.addProject(title, description, people);
+      this.clearInputs();
     }
   }
 
