@@ -31,7 +31,9 @@ class ProjectState extends State<SingleProject> {
   private projects: SingleProject[] = [];
   private static instance: ProjectState;
 
-  private constructor() {super()}
+  private constructor() {
+    super();
+  }
 
   static getInstance() {
     if (this.instance) return this.instance;
@@ -132,6 +134,30 @@ abstract class Component<T extends HTMLElement, U extends HTMLElement> {
   abstract renderContent(): void;
 }
 
+// ProjectItem Class
+class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> {
+  private project: SingleProject;
+
+  get persons() {
+    return this.project.people === 1 ? "1 person" : `${this.project.people} persons`;
+  }
+
+  constructor(hostId: string, project: SingleProject) {
+    super("single-project", hostId, false, project.id);
+    this.project = project;
+    this.configure();
+    this.renderContent();
+  }
+
+  configure(): void {}
+
+  renderContent(): void {
+    this.element.querySelector("h2")!.textContent = this.project.title;
+    this.element.querySelector("h3")!.textContent = this.persons + " assigned.";
+    this.element.querySelector("p")!.textContent = this.project.description;
+  }
+}
+
 // ProjectList Class
 class ProjectList extends Component<HTMLDivElement, HTMLElement> {
   private assignedProjects: SingleProject[] = [];
@@ -162,9 +188,7 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
     const listEl = document.getElementById(`${this.type}-projects-list`) as HTMLUListElement;
     listEl.innerHTML = "";
     for (const project of this.assignedProjects) {
-      const listItem = document.createElement("li");
-      listItem.textContent = project.title;
-      listEl.appendChild(listItem);
+      new ProjectItem(this.element.querySelector("ul")!.id, project);
     }
   }
 }
